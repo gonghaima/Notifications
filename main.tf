@@ -38,6 +38,13 @@ resource "aws_iam_role_policy" "lambda_policy" {
                 Effect   = "Allow",
                 Resource = "arn:aws:logs:*:*:*",
             },
+            {
+                Action = [
+                    "sns:Publish",
+                ],
+                Effect   = "Allow",
+                Resource = "*",
+            },
         ],
     })
 }
@@ -123,4 +130,25 @@ resource "aws_api_gateway_deployment" "api_gateway_deployment" {
     ]
     rest_api_id = aws_api_gateway_rest_api.api_gateway.id
     stage_name  = "prod"
+}
+
+# SNS Topic
+resource "aws_sns_topic" "sns_topic" {
+    name = "my_sns_topic"
+}
+
+# SNS Topic Subscription (Lambda)
+resource "aws_sns_topic_subscription" "sns_lambda_subscription" {
+    topic_arn = aws_sns_topic.sns_topic.arn
+    protocol  = "lambda"
+    endpoint  = aws_lambda_function.lambda_function.arn
+}
+
+# Lambda Permission for SNS
+resource "aws_lambda_permission" "allow_sns" {
+    statement_id  = "AllowExecutionFromSNS"
+    action        = "lambda:InvokeFunction"
+    function_name = aws_lambda_function.lambda_function.function_name
+    principal     = "sns.amazonaws.com"
+    source_arn    = aws_sns_topic.sns_topic.arn
 }
